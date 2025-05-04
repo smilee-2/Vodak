@@ -1,13 +1,15 @@
 from tkinter import filedialog
 from tkinter import messagebox
+from pathlib import Path
 
 import matplotlib
 import flet as ft
 from flet.matplotlib_chart import MatplotlibChart
 
-from core import approximation
+from core import approximation, count_files_in_dir
 
 matplotlib.use("svg")
+BASE_PATH = Path(__file__).parent
 
 def main(page: ft.Page):
     page.title = "Approximation"
@@ -29,7 +31,7 @@ def main(page: ft.Page):
         if thickness.value == '':
             thickness.value = 0
         if material.value != '' and filepath != '':
-            fig = approximation(
+            fig, fig_mu = approximation(
                 filepath,
                 material.value,
                 int(start.value),
@@ -38,6 +40,11 @@ def main(page: ft.Page):
                 int(thickness.value)
             )
             page.add(MatplotlibChart(fig, expand=True))
+            count_files = count_files_in_dir(BASE_PATH / 'image_graph/')
+            if fig_mu is not None:
+                page.add(MatplotlibChart(fig_mu, expand=True))
+                fig_mu.savefig(BASE_PATH / f'image_graph/graph-2light-{count_files + 1}.png')
+            fig.savefig(BASE_PATH / f'image_graph/graph-approx-{count_files + 1}.png')
         elif filepath == '':
             messagebox.showinfo('Внимание!','Не выбран файл')
             return

@@ -1,8 +1,14 @@
+import os
 from typing import Any, List
+from pathlib import Path
 
 from matplotlib import pyplot as plt
 import numpy as np
 
+
+
+def count_files_in_dir(path: Path) -> int:
+    return len(os.listdir(path=f'{path}'))
 
 def polynomial_model(wavelength: int, a: float, b: float, c: float) -> float:
     """
@@ -31,7 +37,7 @@ def calculation_of_birefringence(wavelengths: list[int], interpol: list[float], 
 
 def plot_graph(data_pol_in_file: list, data_calc: list, wavelengths_int: list, wavelengths: list, name: str):
     """
-    Постройка графика
+    Постройка графика для аппроксимации
     """
     fig, axs = plt.subplots(1, 1)
     axs.scatter(wavelengths, data_pol_in_file, label='Исходные данные', color='blue', s=150)
@@ -44,6 +50,16 @@ def plot_graph(data_pol_in_file: list, data_calc: list, wavelengths_int: list, w
     fig.tight_layout()
     return fig
 
+def plot_mu_graph(wavelengths: list[float], mu_array: list[float]):
+    """Постройка графика для mu"""
+    fig, axs = plt.subplots(1, 1)
+    axs.scatter([wave / 10_000 for wave in wavelengths], mu_array, color='blue', s=50)
+    axs.set_xlabel('Длина волны в мкм')
+    axs.set_ylabel('Коэфф. лучепреломления')
+    axs.set_title(f'Двулучепреломление')
+    axs.grid(True)
+    fig.tight_layout()
+    return fig
 
 def calculate_sums_from_file(file):
     """
@@ -117,15 +133,15 @@ def calculated_interpolation(file, final_mat, start, stop, step, thickness: int 
             f.writelines(f'{int_l}\t{val}\n')
             wave_range.append(int_l)
             int_l += step
-    print(thickness)
+
     if thickness != 0:
         print(thickness)
         with open('ДвуЛуч.txt', 'w') as f:
             mu_array = calculation_of_birefringence(wave_range, data_interp, thickness)
             for mu in mu_array:
                 f.writelines(f'{mu}\n')
-
-    return data_pol_in_file, data_interp, wave_range
+        return data_pol_in_file, data_interp, wave_range, mu_array
+    return data_pol_in_file, data_interp, wave_range, None
 
 
 def approximation(file: str, name: str, start: int, stop: int, step: int, thickness: int = 0):
@@ -133,7 +149,7 @@ def approximation(file: str, name: str, start: int, stop: int, step: int, thickn
 
     result = np.linalg.inv(matrix)
     final_mat = np.dot(result, temp_arr)
-    data_pol_in_file, data_interp, wave_range = calculated_interpolation(
+    data_pol_in_file, data_interp, wave_range, mu_array = calculated_interpolation(
         file=file,
         final_mat=final_mat,
         start=start,
@@ -142,5 +158,8 @@ def approximation(file: str, name: str, start: int, stop: int, step: int, thickn
         thickness=thickness
     )
 
-    fig = plot_graph(data_pol_in_file, data_interp, wave_range, wavelengths, name)
-    return fig
+    fig_appr = plot_graph(data_pol_in_file, data_interp, wave_range, wavelengths, name)
+    if thickness != 0:
+        fig_mu = plot_mu_graph(wave_range, mu_array)
+        return fig_appr, fig_mu
+    return fig_appr, None
